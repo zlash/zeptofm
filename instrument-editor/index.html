@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>ZeptoFM Instrument Editor</title>
+    <style type="text/css" media="screen">
+        #editor {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div>
+        <div>
+            <button id="playa440">Play A440</button>
+            <button id="playscale">Play Scale</button>
+        </div>
+
+        <div id="editor">
+        </div>
+    </div>
+
+    <script src="../../zeptofm.js">
+    </script>
+    <script src="src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        const localstoragePrefix = "zeptofm-instrument-editor.";
+
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/monokai");
+        editor.session.setMode("ace/mode/javascript");
+
+        {
+            const storedCode = localStorage.getItem(localstoragePrefix + "current-editor");
+            if (storedCode) {
+                editor.setValue(storedCode);
+            }
+        }
+        const saveDelayMs = 1000;
+        let saveTimeout = null;
+
+        const saveEditor = () => {
+            localStorage.setItem(localstoragePrefix + "current-editor", editor.getValue());
+            saveTimeout = null;
+        };
+
+        editor.session.on('change', function (delta) {
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+            }
+            saveTimeout = setTimeout(saveEditor, saveDelayMs);
+        });
+
+        let audioCtx;
+
+
+
+        const renderInstrument = () => {
+            outputSamplingRate = audioCtx.sampleRate;
+            console.log("Samplerate", outputSamplingRate);
+
+            console.time("Rendering");
+            // Get and render instrument from text editor
+            const editorInstrument = Function(editor.getValue())();
+            console.timeEnd("Rendering");
+            return editorInstrument;
+        };
+
+        document.getElementById("playa440").onclick = () => {
+            audioCtx = audioCtx ?? new AudioContext();
+            const editorInstrument = renderInstrument();
+
+            PlayNote(audioCtx, audioCtx.destination, editorInstrument, 69);
+            //const note = PseudoMMLSequencer(audioCtx, editorInstrument, "a", audioTime);
+            //note();
+        };
+
+        document.getElementById("playscale").onclick = () => {
+            audioCtx = audioCtx ?? new AudioContext();
+            const editorInstrument = renderInstrument();
+            const note = PseudoMMLSequencer(audioCtx, editorInstrument, "t200o3c8defgab>cdefgab>cdefgab");
+            setTimeout(note);
+        };
+    </script>
+</body>
+
+</html>

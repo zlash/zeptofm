@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example - Yuurei Gakudan</title>
+</head>
+
+<body>
+    <script src="../zeptofm.js">
+    </script>
+    <script>
+
+
+
+        const adsr = () => MultiplySamplers(ADSR(0, 0.1, 0, 0.8, 0.25), DCSampler(0.5));
+
+        const instruments = [
+            (freq) => {
+                return MultiplySamplers(Oscillator("s", DCSampler(freq)), adsr());
+            },
+            (freq) => {
+                return MultiplySamplers(Oscillator("q", DCSampler(freq)), adsr());
+            },
+            (freq) => {
+                return MultiplySamplers(Oscillator("t", DCSampler(freq)), adsr());
+            },
+            (freq) => {
+                return MultiplySamplers(Oscillator("w", DCSampler(freq)), adsr());
+            },
+        ];
+
+        /*         for (let instrument of instruments) {
+                    const button = document.createElement("button");
+                    button.innerText = "PLAY";
+        
+                    button.onclick = () => {
+        
+        
+                        console.time("Render Total");
+                        console.time("RenderInstrument()");
+                        const instrumentS = RenderInstrument(audioCtx, instrument, 1, 69, 79, 1);
+                        console.timeEnd("RenderInstrument()");
+                        console.timeEnd("Render Total");
+        
+                        const seq = PseudoMMLSequencer(audioCtx, instrumentS, ("ab>ce<".repeat(4) + ">" + "cdd#g".repeat(4) + "<").repeat(1));
+        
+                        setInterval(seq, 100);
+                    };
+                    document.body.appendChild(button);
+        
+                } */
+
+        {
+            const button = document.createElement("button");
+            button.innerText = "PLAY SONG";
+
+            let audioCtx;
+
+            button.onclick = () => {
+                audioCtx = audioCtx ?? new (window.AudioContext || window.webkitAudioContext)();
+                outputSamplingRate = audioCtx.sampleRate;
+                console.log("Samplerate", outputSamplingRate);
+
+
+                const audioTime = audioCtx.currentTime;
+
+                console.time("Rendering");
+                /*
+                
+                  const bassdrumInstrument = RenderInstrument(audioCtx, freq => {
+                      const frequencyADSR = MultiplySamplers(DCSampler(freq), ADSR(0, 0, 0.02, 1, 0.175));
+                      return MultiplySamplers(Oscillator("s", frequencyADSR), ADSR(0, 0.01, 0.01, 1, 0.175), DCSampler(1));
+                  }, 1, 2, 2, 4);
+  
+                  const bassdrum = PseudoMMLSequencer(audioCtx, bassdrumInstrument, "<<" + "f16rrfr4fr".repeat(4), audioTime);
+  
+                  const snareInstrument = RenderInstrument(audioCtx, freq => {
+                      const frequencyADSR = AddSamplers(DCSampler(freq), MultiplySamplers(DCSampler(100), Oscillator("t", DCSampler(freq / 6.5))));
+                      const wave = AddSamplers(Oscillator("q", frequencyADSR), Noise());
+                      const filteredWave = BiQuadFilter(wave, "l", DCSampler(300), DCSampler(0.6));
+                      return MultiplySamplers(filteredWave, ADSR(0, 0.01, 0.01, 1, 0.2), DCSampler(0.3));
+                  }, 1, 3, 3, 4);
+  
+  
+                  const snare = PseudoMMLSequencer(audioCtx, snareInstrument, "" + "r4frfrfrf8f16f".repeat(2), audioTime);
+  */
+                const setTempo = "t156";
+
+
+
+
+                const pianoInstrument = RenderInstrument(audioCtx, (freq, noteNumber) => {
+
+                    const noteNorm = noteNumber / 128;
+                    const lpfAdsr = ADSR(0, 0, 0, 1, 0.4 + 1 * noteNorm * noteNorm * noteNorm);
+
+                    const sawWave = Oscillator("w", freq);
+                    const kpWave = KarplusStrong(freq, 1);
+                    return [BiQuadFilter(AddSamplers([sawWave, 0.6], [kpWave, 0.3]), "l", [4000, 0.5], 0.1), lpfAdsr, 0.4];
+
+
+                }, 3, 3, 7, 1);
+
+                const bassdrumInstrument = RenderInstrument(audioCtx, freq => {
+                    const frequencyADSR = [freq, ADSR(0, 0, 0.02, 1, 0.175)];
+                    return [Oscillator("s", frequencyADSR), ADSR(0, 0.01, 0.01, 1, 0.175), 1.2];
+                }, 1, 2, 2, 4);
+
+
+                const pedalHiHatInstrument = RenderInstrument(audioCtx, freq => {
+                    const adsr = ADSR(0, 0, 0, 1, 0.4);
+                    return [BiQuadFilter(Noise(), "h", 4000, 1.4), adsr, 1];
+                }, 1, 2, 2, 4);
+
+                const pianoSequence = setTempo +
+                    "o4e8f#g#4>ed#" +
+                    "c#8<br4>f#e" +
+                    "d#8<a#r4>g#f#" +
+                    "e8d#4e8d#c#<bf#" +
+                    "" +
+                    "b8g#r4>ed#" +
+                    "c#8<br4>f#e" +
+                    "d#8<a#r4>g#f#" +
+                    "b8>c#4<<g#8>ef#v7d#16<f#ed#v10"
+                    ;
+
+                const piano = PseudoMMLSequencer(audioCtx, pianoInstrument, pianoSequence.repeat(4), 1);
+
+                let pianoSequence2;
+                {
+                    // offsetted one beat
+                    const pattern =
+                        "o3c#8g#>d#ed#<g#" +
+                        "e8<b4>g#8b>d#<bf#" +
+                        "d#8<a#4>f#8a#>d#f#e" +
+                        "d#8<<a4>e8a>c#<<b4" +
+                        "" +
+                        ">v7g#16bf#g#<v10c#4>e8f#g#e" +
+                        "d#8<e4b8>d#eb>d#" +
+                        "<b8<f#4a#8>d#f#a#>d#" +
+                        "<a#8<a4>e8a>c#<<b4" +
+                        ">v7g#16bf#g#v10";
+
+                    pianoSequence2 = setTempo + "r4" + pattern.repeat(4);
+
+                }
+                const piano2 = PseudoMMLSequencer(audioCtx, pianoInstrument, pianoSequence2, 0.7);
+
+
+                const drumsWait = "r1".repeat(8)
+                let bassdrumSequence;
+                {
+                    const pattern = "o2" + "d4ddd";
+                    bassdrumSequence = setTempo + drumsWait + pattern.repeat(8 * 3);
+                }
+
+                const bassdrum = PseudoMMLSequencer(audioCtx, bassdrumInstrument, bassdrumSequence, 1.1);
+
+                pedalHiHatInstrument
+
+                let pedalHiHatSequence;
+                {
+                    const pattern = "o4" + "r4r8a4aa8";
+                    pedalHiHatSequence = setTempo + drumsWait + pattern.repeat(8 * 3);
+                }
+
+                const pedalHiHat = PseudoMMLSequencer(audioCtx, pedalHiHatInstrument, pedalHiHatSequence, 0.4);
+
+
+                console.timeEnd("Rendering");
+
+                const play = () => {
+                    piano();
+                    piano2();
+                    bassdrum();
+                    pedalHiHat();
+                };
+
+                play();
+                setInterval(() => {
+                    play();
+                }, 100);
+            };
+            document.body.appendChild(button);
+        }
+
+
+    </script>
+</body>
+
+</html>
